@@ -1,0 +1,2 @@
+#cmakedefine USE_BF 1
+#cmakedefine USE_HM 1
