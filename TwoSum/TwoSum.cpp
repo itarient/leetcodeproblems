@@ -1,12 +1,11 @@
 #include "TwoSumConfig.h"
+#include <chrono>
 #include <iostream>
 #ifdef USE_HM
 #include <map>
 #endif
 #include <stdexcept>
 #include <vector>
-
-using namespace std;
 
 class Solution
 {
@@ -29,9 +28,9 @@ public:
             throw std::out_of_range("Target");
     }
 public:
-    virtual vector<int> twoSum(vector<int>& nums, int target) = 0;
+    virtual std::vector<int> twoSum(std::vector<int>& nums, int target) = 0;
 
-    void initialize(vector<int>& nums)
+    void initialize(std::vector<int>& nums)
     {
         nums.clear();
         nums.resize(m_N);
@@ -49,12 +48,12 @@ class SolutionBruteForce: public Solution
 public:
     SolutionBruteForce(size_t _N, int _target) : Solution(_N, _target) {}
 public:
-    vector<int> twoSum(vector<int>& nums, int target)
+    std::vector<int> twoSum(std::vector<int>& nums, int target)
     {
         int idx1 = 0;
         int idx2 = 1;
         if (nums.size() == 2)
-            return vector<int>({idx1, idx2});
+            return std::vector<int>({idx1, idx2});
         bool stop = false;
         while (!stop)
         {
@@ -70,7 +69,7 @@ public:
                 }
             }
         }
-        return vector<int>({idx1, idx2});
+        return std::vector<int>({idx1, idx2});
     }
 };
 #elif USE_HM
@@ -79,13 +78,13 @@ class SolutionHashMap: public Solution
 public:
     SolutionHashMap(size_t _N, int _target) : Solution(_N, _target) {}
 public:
-    vector<int> twoSum(vector<int>& nums, int target)
+    std::vector<int> twoSum(std::vector<int>& nums, int target)
     {
         int idx1 = 0;
         int idx2 = 1;
         std::map<int, size_t> value_map;
 
-        for (vector<int>::iterator it1 = nums.begin(); it1 < nums.end(); it1++)
+        for (std::vector<int>::iterator it1 = nums.begin(); it1 < nums.end(); it1++)
         {
             int el1 = *it1;
             int el2 = target - el1;
@@ -101,17 +100,18 @@ public:
             else
                 value_map.emplace(el1, it1 - nums.begin());
         }
-        return vector<int>({idx1, idx2});
+        return std::vector<int>({idx1, idx2});
     }
 };
 #endif
 
 int main(int argc, char* argv[])
 {
-    const size_t N = 100;
+    const size_t N = 10000;
     const int Target = 0;
-    vector<int> nums;
-    vector<int> indexes;
+    std::vector<int> nums;
+    std::vector<int> indexes;
+    std::chrono::microseconds diff_us; 
 
     try
     {
@@ -124,11 +124,15 @@ int main(int argc, char* argv[])
         #endif
 
         sol.initialize(nums);
+        const auto start = std::chrono::steady_clock::now();
         indexes = sol.twoSum(nums, 0);
+        const auto stop = std::chrono::steady_clock::now();
+        diff_us = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     }
     catch(const std::out_of_range& e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error: out of range " << e.what() << '\n';
+        return 1;
     }
     
     for (const auto& el: nums)
@@ -140,5 +144,6 @@ int main(int argc, char* argv[])
         std::cout << ix << " ";
     std::cout << "]" << std::endl;
 
+    std::cout << "Solution time " << diff_us.count() << "us" << std::endl;
     return 0;
 }
