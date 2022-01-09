@@ -7,49 +7,99 @@
 #include <stdexcept>
 #include <vector>
 
-class Solution
+namespace TwoSum
+{
+
+using SizeType = size_t;
+using ValueType = int;
+using Vector = std::vector<ValueType>;
+using TimeUnit = std::chrono::microseconds;
+
+const SizeType minSize = 2;
+const SizeType maxSize = 10'000;
+const ValueType minValue = -1'000'000'000;
+const ValueType maxValue = 1'000'000'000;
+
+class Base
 {
 public:
-    Solution(size_t _N, int _target)
-    {
-        #ifdef USE_BF
-        std::cout << "Solution: Brute Force" << std::endl;
-        #elif USE_HM
-        std::cout << "Solution: Optimal with hash map" << std::endl;
-        #endif
+    virtual const char* solutionName() const noexcept = 0;
+    virtual Vector twoSum(Vector& nums, ValueType target) const = 0;
 
-        if (_N >= 2 && _N <= 10'000)
-            m_N = _N;
-        else
-            throw std::out_of_range("N");
-        if (_target >= -1'000'000'000 && _target <= 1'000'000'000)
-            m_Target = _target;
-        else
-            throw std::out_of_range("Target");
-    }
 public:
-    virtual std::vector<int> twoSum(std::vector<int>& nums, int target) = 0;
-
-    void initialize(std::vector<int>& nums)
+    void checkSize(SizeType val) const
     {
-        nums.clear();
-        nums.resize(m_N);
-        for (size_t i = 0; i < m_N; i++)
-            nums[i] = i - m_N / 2;
+        if (val < minSize || val > maxSize)
+            throw std::out_of_range("Size");
     }
+
+    void checkValue(ValueType val) const
+    {
+        if (val < minValue || val > maxValue)
+            throw std::out_of_range("Value");
+    }
+
+    void init(Vector& nums, SizeType N) const
+    {
+        checkSize(N);
+
+        nums.clear();
+        nums.resize(N);
+
+        for (SizeType i = 0; i < N; i++)
+        {
+            ValueType value = i - N / 2;
+            checkValue(value);
+            nums[i] = value;
+        }
+    }
+
+    void print(const Vector& nums, const Vector& idxs, TimeUnit tm) const noexcept
+    {
+        printSolutionName();
+        printSolutionVector("nums", nums);
+        printSolutionVector("idxs", idxs);
+
+        std::cout << "Solution time " << tm.count() << "us" << std::endl;
+    }
+
 private:
-    size_t m_N;
-    int m_Target;
+    void printSolutionName() const noexcept
+    {
+        std::cout << "Solution: " << solutionName() << std::endl;
+    }
+
+    void printSolutionVector(const char* name, const Vector& vec) const noexcept
+    {
+        std::cout << "Vector " << name << " = [";
+        for (Vector::const_iterator i = vec.begin(); i != vec.end(); i++)
+        {
+            std::cout << *i;
+            if ((i + 1) != vec.end())
+                std::cout << " ";
+        }
+        std::cout << "]" << std::endl;
+    }
 };
 
+#if !defined(USE_BF) && !defined(USE_HM)
+#error "No solution's alog choosen (define USE_BF or USE_HM at compile time)"
+#endif
+
 #ifdef USE_BF
-class SolutionBruteForce: public Solution
+class BruteForce : public Base
 {
 public:
-    SolutionBruteForce(size_t _N, int _target) : Solution(_N, _target) {}
-public:
-    std::vector<int> twoSum(std::vector<int>& nums, int target)
+    const char* solutionName() const noexcept
     {
+        return "Brute Force";
+    }
+
+    Vector twoSum(Vector& nums, ValueType target) const
+    {
+        checkValue(target);
+        checkSize(nums.size());
+
         int idx1 = 0;
         int idx2 = 1;
         if (nums.size() == 2)
@@ -59,7 +109,8 @@ public:
         {
             if ((nums[idx1] + nums[idx2]) == target)
                 stop = true;
-            else {
+            else 
+            {
                 idx2++;
                 if (idx2 >= nums.size()) {
                     idx1++;
@@ -72,19 +123,29 @@ public:
         return std::vector<int>({idx1, idx2});
     }
 };
-#elif USE_HM
-class SolutionHashMap: public Solution
+
+using Solution = BruteForce;
+#endif
+
+#ifdef USE_HM
+class HashMap : public Base
 {
 public:
-    SolutionHashMap(size_t _N, int _target) : Solution(_N, _target) {}
-public:
-    std::vector<int> twoSum(std::vector<int>& nums, int target)
+    const char* solutionName() const noexcept
     {
+        return "Hash Map";
+    }
+
+    Vector twoSum(Vector& nums, ValueType target) const
+    {
+        checkValue(target);
+        checkSize(nums.size());
+
         int idx1 = 0;
         int idx2 = 1;
         std::map<int, size_t> value_map;
 
-        for (std::vector<int>::iterator it1 = nums.begin(); it1 < nums.end(); it1++)
+        for (Vector::iterator it1 = nums.begin(); it1 < nums.end(); it1++)
         {
             int el1 = *it1;
             int el2 = target - el1;
@@ -103,31 +164,32 @@ public:
         return std::vector<int>({idx1, idx2});
     }
 };
+
+using Solution = HashMap;
 #endif
+
+}; // namespace TwoSum
 
 int main(int argc, char* argv[])
 {
-    const size_t N = 10000;
-    const int Target = 0;
-    std::vector<int> nums;
-    std::vector<int> indexes;
-    std::chrono::microseconds diff_us; 
+    const TwoSum::SizeType N = 10000;
+    const TwoSum::ValueType Target = 9997;
+
+    TwoSum::Vector nums;
+    TwoSum::Vector idxs;
+
+    TwoSum::TimeUnit diff_us; 
+
+    TwoSum::Solution S;
 
     try
     {
-        #ifdef USE_BF
-        SolutionBruteForce sol(N, Target);
-        #elif USE_HM
-        SolutionHashMap sol(N, Target);
-        #else
-        #error Choose solution: USE_BF, USE_HM
-        #endif
+        S.init(nums, N);
 
-        sol.initialize(nums);
         const auto start = std::chrono::steady_clock::now();
-        indexes = sol.twoSum(nums, 0);
+        idxs = S.twoSum(nums, Target);
         const auto stop = std::chrono::steady_clock::now();
-        diff_us = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        diff_us = std::chrono::duration_cast<TwoSum::TimeUnit>(stop - start);
     }
     catch(const std::out_of_range& e)
     {
@@ -135,15 +197,7 @@ int main(int argc, char* argv[])
         return 1;
     }
     
-    for (const auto& el: nums)
-        std::cout << el << " ";
-    std::cout << std::endl;
+    S.print(nums, idxs, diff_us);
 
-    std::cout << "[ ";
-    for (const auto& ix: indexes)
-        std::cout << ix << " ";
-    std::cout << "]" << std::endl;
-
-    std::cout << "Solution time " << diff_us.count() << "us" << std::endl;
     return 0;
 }
